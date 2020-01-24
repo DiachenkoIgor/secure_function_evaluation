@@ -90,8 +90,8 @@ void NaoriPinkasSenderData::writeInitDataToFile(const std::string &path, NaoriPi
 }
 
 void NaoriPinkasSenderData::readInitDataFromFile(const std::string &path, NaoriPinkasSenderData& holder){
-    
-     std::ifstream t("/home/idiachen/test.txt");
+    std::cout << "Reading" << std::endl;
+     std::ifstream t(path);
     std::string str((std::istreambuf_iterator<char>(t)),
                  std::istreambuf_iterator<char>());
                  
@@ -100,8 +100,6 @@ void NaoriPinkasSenderData::readInitDataFromFile(const std::string &path, NaoriP
     std::size_t current, previous = 0;
     current = str.find("\n");
     while (current != std::string::npos) {
-        std::cout << str.substr(previous, current - previous) << std::endl;
-        
         data.push_back(str.substr(previous, current - previous));
         previous = current + 1;
         current = str.find("\n", previous);
@@ -116,4 +114,5 @@ void NaoriPinkasSenderData::readInitDataFromFile(const std::string &path, NaoriP
     mpz_set_str(holder.r, data.at(5).c_str(), 10);
     mpz_set_str(holder.Cr, data.at(6).c_str(), 10);
     
+    std::cout << "End Reading" << std::endl;
 }

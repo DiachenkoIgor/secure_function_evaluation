@@ -7,6 +7,7 @@ class NaoriPinkasReceiverData
 public:
 
     mpz_t p, q, g, C, gr;
+    int msgByteLength;
 
     NaoriPinkasReceiverData();
     ~NaoriPinkasReceiverData();

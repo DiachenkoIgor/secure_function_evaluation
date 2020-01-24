@@ -6,9 +6,106 @@ NaoriPinkasReceiver::NaoriPinkasReceiver()
 
 NaoriPinkasReceiver::~NaoriPinkasReceiver()
 {
+    close(this -> sock);
 }
 
-void NaoriPinkasReceiver::generatePublicKey(NaoriPinkasReceiverData& requiredData, int choice, mpz_t& key, mpz_t& result){
+NaoriPinkasReceiver::NaoriPinkasReceiver(int port, std::string address){
+    this -> port = port;
+    this -> address = address;
+}
+
+std::string NaoriPinkasReceiver::readJSON(){
+    std::string result;
+    
+     int q=0;
+        char t[1] = {0};
+        bool stop=true;
+        while (stop){
+            read(this -> sock, t, 1);
+            if(t[0]=='{'){
+                q++;
+            }
+            if(t[0]=='}'){
+                q--;
+                if(q==0) stop=false;
+            }
+            result.append(t);
+        }
+        return result;
+}
+int NaoriPinkasReceiver::initSocketClient(){
+
+    struct sockaddr_in serv_addr; 
+
+    if ((this -> sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+         return -1; 
+    } 
+   
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(this -> port); 
+       
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, this -> address.c_str(), &serv_addr.sin_addr)<=0)  
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1;
+    } 
+   
+    if (connect(this -> sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nConnection Failed \n"); 
+         return -1;
+    } 
+}
+
+void NaoriPinkasReceiver::initialize(){
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    
+    if(initSocketClient() == -1){
+        return;}
+     	std::cout << "Receiver Connected" << std::endl;
+    std::string im = readJSON();
+    
+    std::cout << "Receiver receive " << std::endl << im << std::endl;
+    
+    ObliviousUtils::deserializeNPReceiverData(this -> data, im);
+}
+void NaoriPinkasReceiver::receive(int choice, char * result){
+    this -> choice = choice;
+    step1();
+}
+void NaoriPinkasReceiver::step1(){
+    mpz_t key;
+    mpz_init(key);
+    
+    generatePublicKey(this -> data, this -> choice, key);
+    mpz_set(this -> pk.key, key);
+    
+    std::string result = ObliviousUtils::serializeNPReceiverPublicKey(pk);
+    
+    send(this -> sock , result.c_str() , result.size() , 0 );
+}
+
+void NaoriPinkasReceiver::step2(char * result){
+    mpz_t tmpResult;
+    mpz_init(tmpResult);
+    
+    std::string json = readJSON();
+    NaoriPinkasTransfer transfer;
+    ObliviousUtils::deserializeNPTransfer(transfer, json);
+    
+    decryptResult(transfer, choice, this -> data.msgByteLength, this -> pk.key ,tmpResult);
+    
+    char * tmp = nullptr;
+    int quantity = ObliviousUtils::exportGmpNumberToByteArray(tmpResult, tmp);
+    
+    memcpy(result, tmp, quantity);
+    delete [] tmp;
+}
+
+void NaoriPinkasReceiver::generatePublicKey(NaoriPinkasReceiverData& requiredData, int choice, mpz_t& key){
     mpz_t k, gk, c_over_gk;
     mpz_inits(k, gk, c_over_gk, NULL);
     

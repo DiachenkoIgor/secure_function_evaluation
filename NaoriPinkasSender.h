@@ -16,7 +16,7 @@
 class NaoriPinkasSender
 {
 private:
-    int messageByteLength;
+
     NaoriPinkasSenderData data;
     NaoriPinkasTransfer transfer;
     std::string path;
@@ -27,6 +27,7 @@ private:
     void initServerAndAccept();
     std::string readJSON();
 public:
+int messageByteLength;
     NaoriPinkasSender(std::string path, int port);
     NaoriPinkasSender();
     ~NaoriPinkasSender();

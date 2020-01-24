@@ -159,6 +159,8 @@ std::string ObliviousUtils::serializeNPReceiverData(NaoriPinkasReceiverData& dat
     result["gr"] = tmpHolder;
     tmpHolder.clear();
     
+    result["msgByteLength"] = data.msgByteLength;
+    
     return result.dump();
 }
 
@@ -194,6 +196,7 @@ void  ObliviousUtils::deserializeNPReceiverData(NaoriPinkasReceiverData& data, s
     
     mpz_set(data.gr, mpz_tmp);
     
+    data.msgByteLength =  tmp["msgByteLength"].get<int>();
     
     mpz_clear(mpz_tmp);
 }
