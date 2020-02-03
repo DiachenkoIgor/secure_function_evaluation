@@ -8,6 +8,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <string>
+#include <iostream>
 #include "NaoriPinkasReceiverData.h"
 #include "./src/ReceiverPublicKey.h"
 #include "NaoriPinkasTransfer.h"
@@ -59,6 +62,10 @@ public:
     static std::string serializeNPTransfer(NaoriPinkasTransfer& data);
     
     static void deserializeNPTransfer(NaoriPinkasTransfer& data, std::string& json);
+    
+    static void testAnalyzeSender(char * preffix, mpz_t& value);
+    
+    static void testAnalyzeReceiver(char * preffix, mpz_t& value);
     
     
     

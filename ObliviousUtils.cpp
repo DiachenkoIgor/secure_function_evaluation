@@ -26,6 +26,8 @@ void ObliviousUtils::generatePrimeRandomNumber(mpz_t &place, int bytesSize){
     
     generateRandomNumber(tmp,bytesSize);
     mpz_nextprime(place,tmp);
+    
+    mpz_clear(tmp);
 }
 
 int ObliviousUtils::exportGmpNumberToByteArray(mpz_t &data, char *& ptr){
@@ -37,7 +39,7 @@ int ObliviousUtils::exportGmpNumberToByteArray(mpz_t &data, char *& ptr){
 }
 
 int ObliviousUtils::importGmpNumberFromByteArray(mpz_t &data, const char * ptr, int size){
-      mpz_import (data, size, 1, sizeof(ptr[0]), 0, 0, ptr);
+      mpz_import (data, size, 1, sizeof(ptr[0]), 1, 0, ptr);
 }
 
 void ObliviousUtils::generateHash(const unsigned char * data[], int quantity, int sizes[], unsigned char * out, int outLength){
@@ -59,53 +61,65 @@ void ObliviousUtils::generateHash(const unsigned char * data[], int quantity, in
 
 void ObliviousUtils::keyDerevationFunction(unsigned char * out, int outLength, const char * key, int keyLength){
         static int saltFlag = -1;
-        static char unsigned salt [15];
+        static char unsigned salt [crypto_pwhash_SALTBYTES];
         if(saltFlag == -1){
             randombytes_buf(salt, sizeof(salt));
             saltFlag=1;
         }
 
-    
+
          int result = crypto_pwhash(out, outLength, key, keyLength, salt,
                   3,
                   crypto_pwhash_MEMLIMIT_MIN, crypto_pwhash_ALG_DEFAULT);
-        
-        if(result){
+
+        if(result == -1){
                 throw std::runtime_error("Can't derivate function!");
         }
 }
 
 void ObliviousUtils::encrypt(mpz_t &result, mpz_t &key, mpz_t &R, mpz_t &msg, int msgLengthBytes){
+
     char * keyByteData = nullptr;
     int keyDataSize = exportGmpNumberToByteArray(key,keyByteData);
     char * RByteData = nullptr;
     int RDataSize = exportGmpNumberToByteArray(R,RByteData);
-   
+
     const char * tmp[] = {keyByteData, RByteData};
     int tmpSize[] = {keyDataSize, RDataSize};
     
     int tmpHashSize = 60;
     unsigned char hash[tmpHashSize];
     
+    
+  
     generateHash((const unsigned char **)tmp, 2, tmpSize, hash, tmpHashSize);
+     char* outPtr = nullptr;
     
-    
-    unsigned char out[msgLengthBytes];
-    keyDerevationFunction((unsigned char *)out, msgLengthBytes, (const char *)hash, tmpHashSize);
-    
+    if(msgLengthBytes > tmpHashSize){
+        unsigned char out[msgLengthBytes];
+        keyDerevationFunction((unsigned char *)out, msgLengthBytes, (const char *)hash, tmpHashSize);
+        outPtr = new char[msgLengthBytes];
+        memcpy(outPtr, out, sizeof out);
+    }    
+    else{
+        outPtr = new char[tmpHashSize];
+        memcpy(outPtr, hash, sizeof hash);
+    }
     mpz_t data;
     mpz_init(data);
     
-    importGmpNumberFromByteArray(data, (const char *) out, msgLengthBytes + 1);
+    importGmpNumberFromByteArray(data, (const char *) outPtr, msgLengthBytes + 1);
     
     mpz_xor(result, data, msg);
-    
+
     mpz_clear(data);
     delete [] keyByteData;
     delete [] RByteData;
+    delete [] outPtr;
 }
 
 void ObliviousUtils::decrypt(mpz_t &result, mpz_t &key, mpz_t &R, mpz_t &cph, int cphLengthBytes){
+
     char * keyByteData = nullptr;
     int keyDataSize = exportGmpNumberToByteArray(key,keyByteData);
     char * RByteData = nullptr;
@@ -116,17 +130,26 @@ void ObliviousUtils::decrypt(mpz_t &result, mpz_t &key, mpz_t &R, mpz_t &cph, in
     
     int tmpHashSize = 60;
     unsigned char hash[tmpHashSize];
-    
+
     generateHash((const unsigned char **)tmp, 2, tmpSize, hash, tmpHashSize);
     
-    
-    unsigned char out[cphLengthBytes];
-    keyDerevationFunction((unsigned char *)out, cphLengthBytes, (const char *)hash, tmpHashSize);
+      char* outPtr = nullptr;
+       if(cphLengthBytes > tmpHashSize){
+        unsigned char out[cphLengthBytes];
+        keyDerevationFunction((unsigned char *)out, cphLengthBytes, (const char *)hash, tmpHashSize);
+        outPtr = new char[cphLengthBytes];
+        memcpy(outPtr, out, sizeof out);
+    }    
+    else{
+        outPtr = new char[tmpHashSize];
+        memcpy(outPtr, hash, sizeof hash);
+    }
+  
     
     mpz_t data;
     mpz_init(data);
     
-    importGmpNumberFromByteArray(data, (const char *) out, cphLengthBytes + 1);
+    importGmpNumberFromByteArray(data, (const char *) outPtr, cphLengthBytes + 1);
     
     mpz_xor(result, data, cph);
     
@@ -172,10 +195,11 @@ void  ObliviousUtils::deserializeNPReceiverData(NaoriPinkasReceiverData& data, s
     std::vector<char> tmpHolder;
     
     tmpHolder = tmp["p"].get<std::vector<char>>();
+
     convertVectorToGmp(tmpHolder, mpz_tmp);
-    
+
     mpz_set(data.p, mpz_tmp);
-    
+
     tmpHolder = tmp["q"].get<std::vector<char>>();
     convertVectorToGmp(tmpHolder, mpz_tmp);
     
@@ -199,6 +223,7 @@ void  ObliviousUtils::deserializeNPReceiverData(NaoriPinkasReceiverData& data, s
     data.msgByteLength =  tmp["msgByteLength"].get<int>();
     
     mpz_clear(mpz_tmp);
+    
 }
 
 
@@ -207,7 +232,7 @@ std::string ObliviousUtils::serializeNPReceiverPublicKey(ReceiverPublicKey& data
     std::vector<char> tmpHolder;
     
     convertGMPtoVector(tmpHolder, data.key);
-    result["p"] = tmpHolder;
+    result["key"] = tmpHolder;
     tmpHolder.clear();
     
     return result.dump();
@@ -319,8 +344,53 @@ void ObliviousUtils::convertVectorToGmp(std::vector<char>& holder, mpz_t& data){
     
     int size = holder.size();
     
-    ObliviousUtils::importGmpNumberFromByteArray(tmp, holder.data(), size);
     
+    
+    ObliviousUtils::importGmpNumberFromByteArray(tmp, holder.data(), size);
+    mpz_set(data,tmp);
     mpz_clear(tmp);
+}
+
+void ObliviousUtils::testAnalyzeSender(char * preffix, mpz_t& value){
+    int size = mpz_sizeinbase(value, 10) +2;
+     char data[size];
+    
+    mpz_get_str(data,10,value);
+    
+    std::string result;
+    
+    result.append(preffix);
+    
+    result.append("-");
+    result.append(data);
+    result.append("\n");
+    
+    
+    std::fstream myFile("/home/idiachen/sender.txt", std::fstream::out | std::fstream::app);
+    
+    myFile << result;
+    
+    myFile.close();
+}
+void ObliviousUtils::testAnalyzeReceiver(char * preffix, mpz_t& value){
+    int size = mpz_sizeinbase(value, 10) +2;
+     char data[size];
+    
+    mpz_get_str(data,10,value);
+    
+    std::string result;
+    
+    
+    result.append(preffix);
+    
+    result.append("-");
+    result.append(data);
+    result.append("\n");
+    
+    std::fstream myFile("/home/idiachen/receiver.txt", std::fstream::out | std::fstream::app);
+    
+    myFile << result;
+    
+    myFile.close();
 }
 

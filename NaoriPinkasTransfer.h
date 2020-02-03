@@ -1,7 +1,7 @@
 #ifndef NAORIPINKASTRANSFER_H
 #define NAORIPINKASTRANSFER_H
 #include <cstring>
-#include <iostream> // std::cout
+#include <iostream> 
 
 class NaoriPinkasTransfer
 {

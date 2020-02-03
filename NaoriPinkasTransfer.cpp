@@ -2,6 +2,9 @@
 
 NaoriPinkasTransfer::NaoriPinkasTransfer()
 {
+    this -> m1 = nullptr;
+    this -> m2 = nullptr;
+    this -> R = nullptr;
 }
 
 NaoriPinkasTransfer::~NaoriPinkasTransfer()
@@ -36,11 +39,12 @@ void NaoriPinkasTransfer::checkAndCleanArray(char * ptr){
 }
 
 void NaoriPinkasTransfer::setM1(char* m1, size_t m1Size){
+
         checkAndCleanArray(this -> m1);
         this -> m1 = new char[m1Size];
         
         std::memcpy(this -> m1, m1, m1Size * sizeof(char));
-        
+
         this -> m1Size = m1Size;
 }
 

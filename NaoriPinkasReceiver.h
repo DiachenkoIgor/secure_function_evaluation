@@ -19,7 +19,7 @@ private:
     std::string address;
     NaoriPinkasReceiverData data;
     
-    ReceiverPublicKey pk;
+    mpz_t key;
     
     std::string readJSON();
     int initSocketClient();
@@ -31,7 +31,7 @@ public:
     NaoriPinkasReceiver();
     ~NaoriPinkasReceiver();
     
-    static void generatePublicKey(NaoriPinkasReceiverData& requiredData, int choice, mpz_t& key);
+    static void generatePublicKey(NaoriPinkasReceiverData& requiredData, int choice, mpz_t& pkey, mpz_t& key);
     static void decryptResult(NaoriPinkasTransfer& requiredData, int choice, int msgByteLength, mpz_t& key, mpz_t& result);
 
     void initialize();
