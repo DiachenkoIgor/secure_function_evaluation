@@ -10,7 +10,7 @@ NaoriPinkasSenderData::NaoriPinkasSenderData(int rLength,
                                                         rLength {rLength},
                                                         qLength {qLength},
                                                         pLength {pLength}{
-        mpz_inits(p, q, g, C, r, Cr, gr, NULL);                                            
+        mpz_inits(p, q, g, C, r, Cr, gr, NULL);                                     
 }
 
 NaoriPinkasSenderData::~NaoriPinkasSenderData()
@@ -22,7 +22,6 @@ void NaoriPinkasSenderData::generateInitData(NaoriPinkasSenderData& holder){
     
     mpz_t tmp, tmp2, pdq;
     mpz_inits(tmp,tmp2, pdq, NULL);
-    std::cout << "Start generate Data!" << std::endl;
     
     ObliviousUtils::generatePrimeRandomNumber(holder.q, holder.qLength / 8);
     
@@ -55,7 +54,6 @@ void NaoriPinkasSenderData::generateInitData(NaoriPinkasSenderData& holder){
     mpz_powm(holder.Cr, holder.C, holder.r, holder.p);
     
     mpz_clears(tmp, tmp2, pdq, NULL);
-    std::cout << "End generate Data!" << std::endl;
 }
 
 void NaoriPinkasSenderData::writeInitDataToFile(const std::string &path, NaoriPinkasSenderData& holder){
@@ -90,22 +88,25 @@ void NaoriPinkasSenderData::writeInitDataToFile(const std::string &path, NaoriPi
 }
 
 void NaoriPinkasSenderData::readInitDataFromFile(const std::string &path, NaoriPinkasSenderData& holder){
-    std::cout << "Reading" << std::endl;
+
      std::ifstream t(path);
+
     std::string str((std::istreambuf_iterator<char>(t)),
                  std::istreambuf_iterator<char>());
                  
     std::vector<std::string> data;
-    
+
     std::size_t current, previous = 0;
     current = str.find("\n");
+    
     while (current != std::string::npos) {
         data.push_back(str.substr(previous, current - previous));
         previous = current + 1;
         current = str.find("\n", previous);
     }
+
      data.push_back(str.substr(previous,str.size()));
-    
+
     mpz_set_str(holder.C, data.at(0).c_str(), 10);
     mpz_set_str(holder.p, data.at(1).c_str(), 10);
     mpz_set_str(holder.q, data.at(2).c_str(), 10);
@@ -114,5 +115,4 @@ void NaoriPinkasSenderData::readInitDataFromFile(const std::string &path, NaoriP
     mpz_set_str(holder.r, data.at(5).c_str(), 10);
     mpz_set_str(holder.Cr, data.at(6).c_str(), 10);
     
-    std::cout << "End Reading" << std::endl;
 }

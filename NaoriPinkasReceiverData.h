@@ -2,6 +2,10 @@
 #define NAORIPINKASRECEIVERDATA_H
 #include <stdio.h>
 #include <gmp.h>
+#include "NaoriPinkasSenderData.h"
+
+class NaoriPinkasSenderData;
+
 class NaoriPinkasReceiverData
 {
 public:
@@ -11,6 +15,8 @@ public:
 
     NaoriPinkasReceiverData();
     ~NaoriPinkasReceiverData();
+    
+    static void createReceiverData(NaoriPinkasReceiverData& result, NaoriPinkasSenderData& data, int messagesLength);
 
 };
 

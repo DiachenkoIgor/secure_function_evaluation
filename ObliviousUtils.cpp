@@ -93,22 +93,24 @@ void ObliviousUtils::encrypt(mpz_t &result, mpz_t &key, mpz_t &R, mpz_t &msg, in
     
   
     generateHash((const unsigned char **)tmp, 2, tmpSize, hash, tmpHashSize);
+
      char* outPtr = nullptr;
-    
     if(msgLengthBytes > tmpHashSize){
         unsigned char out[msgLengthBytes];
         keyDerevationFunction((unsigned char *)out, msgLengthBytes, (const char *)hash, tmpHashSize);
         outPtr = new char[msgLengthBytes];
         memcpy(outPtr, out, sizeof out);
+        
     }    
     else{
         outPtr = new char[tmpHashSize];
         memcpy(outPtr, hash, sizeof hash);
     }
+
     mpz_t data;
     mpz_init(data);
     
-    importGmpNumberFromByteArray(data, (const char *) outPtr, msgLengthBytes + 1);
+    importGmpNumberFromByteArray(data, (const char *) outPtr, msgLengthBytes);
     
     mpz_xor(result, data, msg);
 
@@ -131,27 +133,31 @@ void ObliviousUtils::decrypt(mpz_t &result, mpz_t &key, mpz_t &R, mpz_t &cph, in
     int tmpHashSize = 60;
     unsigned char hash[tmpHashSize];
 
+
     generateHash((const unsigned char **)tmp, 2, tmpSize, hash, tmpHashSize);
     
+
       char* outPtr = nullptr;
        if(cphLengthBytes > tmpHashSize){
         unsigned char out[cphLengthBytes];
         keyDerevationFunction((unsigned char *)out, cphLengthBytes, (const char *)hash, tmpHashSize);
         outPtr = new char[cphLengthBytes];
         memcpy(outPtr, out, sizeof out);
+    
     }    
     else{
         outPtr = new char[tmpHashSize];
         memcpy(outPtr, hash, sizeof hash);
     }
-  
+
     
     mpz_t data;
     mpz_init(data);
     
-    importGmpNumberFromByteArray(data, (const char *) outPtr, cphLengthBytes + 1);
-    
+    importGmpNumberFromByteArray(data, (const char *) outPtr, cphLengthBytes );
+
     mpz_xor(result, data, cph);
+
     
     mpz_clear(data);
     delete [] keyByteData;
@@ -349,6 +355,27 @@ void ObliviousUtils::convertVectorToGmp(std::vector<char>& holder, mpz_t& data){
     ObliviousUtils::importGmpNumberFromByteArray(tmp, holder.data(), size);
     mpz_set(data,tmp);
     mpz_clear(tmp);
+}
+
+std::string ObliviousUtils::readJSON(int descriptor){
+    std::string result;
+    
+     int q=0;
+        char t[2];
+        t[1] = '\0';
+        bool stop=true;
+        while (stop){
+            recv(descriptor, t, 1,0);
+            if(*t=='{'){
+                q++;
+            }
+            if(*t=='}'){
+                q--;
+                if(q==0) stop=false;
+            }
+            result.append(t);
+        }
+        return result; 
 }
 
 void ObliviousUtils::testAnalyzeSender(char * preffix, mpz_t& value){

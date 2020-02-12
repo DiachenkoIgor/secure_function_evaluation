@@ -8,73 +8,19 @@ NaoriPinkasReceiver::NaoriPinkasReceiver()
 NaoriPinkasReceiver::~NaoriPinkasReceiver()
 {
     mpz_clear(this -> key);
-    close(this -> sock);
 }
 
-NaoriPinkasReceiver::NaoriPinkasReceiver(int port, std::string address){
-    this -> port = port;
-    this -> address = address;
-    mpz_init(key);
+NaoriPinkasReceiver::NaoriPinkasReceiver(int descriptor){
+    this -> fDescriptor = descriptor;
+    mpz_init(this -> key);
 }
 
-std::string NaoriPinkasReceiver::readJSON(){
-    std::string result;
-    
-     int q=0;
-        char t[2];
-        t[1] = '\0';
-        bool stop=true;
-        while (stop){
-              
-            read(this -> sock, t, 1);
-            if(*t=='{'){
-                q++;
-            }
-            if(*t=='}'){
-                q--;
-                if(q==0) stop=false;
-            }
-            result.append(t);
-        }
-        return result;
-}
-int NaoriPinkasReceiver::initSocketClient(){
-
-    struct sockaddr_in serv_addr; 
-
-    if ((this -> sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        std::cout << "Socket creation error" << std::endl;
-        return -1; 
-    } 
-   
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(this -> port); 
-       
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, this -> address.c_str(), &serv_addr.sin_addr)<=0)  
-    { 
-        std::cout << "Invalid address/ Address not supported" << std::endl;
-        return -1;
-    } 
-   
-    if (connect(this -> sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        std::cout << "Connection Failed" << std::endl;
-        return -1;
-    } 
-}
 
 void NaoriPinkasReceiver::initialize(){
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    if(initSocketClient() == -1){
-        return;}
 
-    std::string im = readJSON();
-
+    std::string im = ObliviousUtils::readJSON(this -> fDescriptor);
+    SimpleLogging::LOG("NP Receiver - initialize data "+im);
     ObliviousUtils::deserializeNPReceiverData(this -> data, im);
-
     
 }
 void NaoriPinkasReceiver::receive(int choice, char * result){
@@ -85,7 +31,7 @@ void NaoriPinkasReceiver::receive(int choice, char * result){
 void NaoriPinkasReceiver::step1(){
     mpz_t pkey;
     mpz_init(pkey);
-    
+
     ReceiverPublicKey pk;
     
     generatePublicKey(this -> data, this -> choice, pkey, this -> key);
@@ -94,10 +40,10 @@ void NaoriPinkasReceiver::step1(){
     
     std::string result = ObliviousUtils::serializeNPReceiverPublicKey(pk);
     
-   // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    send(this -> sock , result.c_str() , result.size() , 0 );
+    SimpleLogging::LOG("NP Receiver - public key - "+result);
     
-
+    send(this -> fDescriptor , result.c_str() , result.size() , 0 );
+    
     mpz_clear(pkey);
 }
 
@@ -105,23 +51,19 @@ void NaoriPinkasReceiver::step2(char * result){
     mpz_t tmpResult;
     mpz_init(tmpResult);
 
-    std::string json = readJSON();
-
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::string json = ObliviousUtils::readJSON(this -> fDescriptor);
+    
+    SimpleLogging::LOG("NP Receiver - transfer data - "+json);
     
     NaoriPinkasTransfer transfer;
     ObliviousUtils::deserializeNPTransfer(transfer, json);
-    
+
     decryptResult(transfer, choice, this -> data.msgByteLength, this -> key ,tmpResult);
-    
+
     char * tmp = nullptr;
     int quantity = ObliviousUtils::exportGmpNumberToByteArray(tmpResult, tmp);
-    
     memcpy(result, tmp, quantity);
-    
     mpz_clear(tmpResult);
-
     delete [] tmp;
 }
 
@@ -163,8 +105,6 @@ void NaoriPinkasReceiver::decryptResult(NaoriPinkasTransfer& requiredData, int c
     if(choice==1){
         ObliviousUtils::importGmpNumberFromByteArray(msg, requiredData.getM2(), requiredData.GetM2Size());
 
-        for(int i =0; i < requiredData.GetM2Size(); i++)
-            std::cout << (int)requiredData.getM2()[i] << " ";
         ObliviousUtils::decrypt(result, key, R, msg, msgByteLength);
     }else {
         ObliviousUtils::importGmpNumberFromByteArray(msg, requiredData.getM1(), requiredData.GetM1Size());

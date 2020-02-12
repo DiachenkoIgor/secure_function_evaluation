@@ -2,11 +2,13 @@
 #define NAORIPINKASRECEIVER_H
 #include <stdio.h>
 #include <string>
+#include <iostream>  
 #include <gmp.h>
 #include "NaoriPinkasReceiverData.h"
 #include "ObliviousUtils.h"
 #include "NaoriPinkasTransfer.h"
 #include "./src/ReceiverPublicKey.h"
+#include "./src/SimpleLogging.h"
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <unistd.h> 
@@ -15,19 +17,13 @@
 class NaoriPinkasReceiver
 {
 private:
-    int sock, choice, port;
-    std::string address;
+    int fDescriptor, choice;
     NaoriPinkasReceiverData data;
     
     mpz_t key;
-    
-    std::string readJSON();
-    int initSocketClient();
-    
-    
-    
+
 public:
-    NaoriPinkasReceiver(int port, std::string address);
+    NaoriPinkasReceiver(int descriptor);
     NaoriPinkasReceiver();
     ~NaoriPinkasReceiver();
     
@@ -41,6 +37,10 @@ public:
     
     int getMsgSize(){
         return data.msgByteLength;
+    }
+    
+    void setDescriptor(int descriptor){
+        this -> fDescriptor = descriptor;
     }
 };
 

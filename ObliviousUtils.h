@@ -15,8 +15,14 @@
 #include "./src/ReceiverPublicKey.h"
 #include "NaoriPinkasTransfer.h"
 #include "./src/JSON/json.hpp"
+#include <sys/socket.h> 
+#include <stdlib.h> 
+#include <netinet/in.h> 
 
 using json = nlohmann::json;
+
+class NaoriPinkasReceiverData;
+
 class ObliviousUtils
 {
 private:
@@ -62,6 +68,8 @@ public:
     static std::string serializeNPTransfer(NaoriPinkasTransfer& data);
     
     static void deserializeNPTransfer(NaoriPinkasTransfer& data, std::string& json);
+    
+    static std::string readJSON(int descriptor);
     
     static void testAnalyzeSender(char * preffix, mpz_t& value);
     
